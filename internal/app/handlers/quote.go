@@ -16,6 +16,21 @@ import (
 	"github.com/google/uuid"
 )
 
+// getFallbackQuote returns a simple local quote when OpenRouter is unavailable.
+func getFallbackQuote(tag string) string {
+	// Small, safe set of templates.
+	templates := []string{
+		"Find strength in %s — even small steps count.",
+		"%s is a path, not a destination. Keep moving forward.",
+		"When you embrace %s, you discover your courage.",
+		"Let %s be a reminder of how resilient you are.",
+		"A single act of %s can change your day.",
+	}
+	// Use a deterministic selection to avoid extra randomness in tests.
+	idx := len(tag) % len(templates)
+	return fmt.Sprintf(templates[idx], tag)
+}
+
 // QuoteHandler handles quote-related requests
 type QuoteHandler struct {
 	OpenRouterClient *client.OpenRouterClient
@@ -84,16 +99,15 @@ func (h *QuoteHandler) CreateQuote(c *gin.Context) {
 	// Record start time
 	startTime := time.Now()
 
-	// Generate quote from OpenRouter
+	// Generate quote from OpenRouter (with local fallback)
 	quoteText, err := h.OpenRouterClient.GenerateQuote(req.Tag)
+	usedFallback := false
 	if err != nil {
-		log.Printf("Error generating quote: %v", err)
+		log.Printf("OpenRouter generation failed: %v. Falling back to local generator.", err)
 		metrics.RecordQuoteError()
-		c.JSON(http.StatusServiceUnavailable, ErrorResponse{
-			Error:   "quote_generation_failed",
-			Message: "Failed to generate quote. Please try again later.",
-		})
-		return
+		// Use a local fallback so the API remains available even if OpenRouter is down
+		quoteText = getFallbackQuote(req.Tag)
+		usedFallback = true
 	}
 
 	// Calculate latency
@@ -108,12 +122,17 @@ func (h *QuoteHandler) CreateQuote(c *gin.Context) {
 	tagSource := models.GetTagSource(req.Tag)
 
 	// Create quote record
+	source := "openrouter"
+	if usedFallback {
+		source = "fallback"
+	}
+
 	quote := models.Quote{
 		Tag:       req.Tag,
 		TagSource: tagSource,
 		QuoteText: quoteText,
 		Author:    nil, // OpenRouter doesn't typically return author
-		Source:    "openrouter",
+		Source:    source,
 		CreatedAt: time.Now(),
 		LatencyMs: latencyMs,
 		ClientIP:  c.ClientIP(),
