@@ -296,39 +296,16 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Deploy to Railway
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_API_KEY }}
-        continue-on-error: true
+      - name: Create release summary
         run: |
-          echo "Deploying to Railway..."
-          if [ -z "$RAILWAY_TOKEN" ]; then
-            echo "⚠️  Railway token not configured, skipping deployment"
-            exit 0
-          fi
-          
-          echo "✓ Railway token found"
-          echo "✓ Installing Railway CLI..."
-          npm install -g @railway/cli
-          
-          echo "✓ Triggering Railway deployment..."
-          railway up --detach || echo "⚠️  Railway deployment trigger completed"
-          
-          echo "✅ Railway deployment process initiated!"
-          echo "📍 Check your Railway dashboard for deployment status"
-          echo "🌐 Your app will be available at: https://quotebox-production.up.railway.app"
-          echo "   (or your custom domain in Railway dashboard)"
-
-      - name: Create deployment summary
-        run: |
-          echo "## Deployment Summary 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "## Release Summary 🚀" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Docker Image**: ${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Timestamp**: $(date -u)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Deployment completed successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Build and publish pipeline completed successfully!" >> $GITHUB_STEP_SUMMARY
 
   # Summary job to check overall pipeline status
   pipeline_summary:
