@@ -15,7 +15,7 @@ permissions:
 env:
   GO_VERSION: '1.20'
   DOCKER_IMAGE: quotebox
-  REGISTRY: ghcr.io
+  REGISTRY: docker.io
 
 jobs:
   # Stage 1: Build and Install Dependencies
@@ -189,7 +189,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            ${{ env.REGISTRY }}/${{ github.repository }}
+            ${{ env.REGISTRY }}/${{ secrets.DOCKERHUB_USERNAME }}/quotebox
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -204,7 +204,9 @@ jobs:
           file: ./Dockerfile
           push: false
           load: true
-          tags: ${{ env.DOCKER_IMAGE }}:test
+          tags: |
+            ${{ env.DOCKER_IMAGE }}:test
+            ${{ env.REGISTRY }}/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE }}:test
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -266,21 +268,13 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-        continue-on-error: true
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate Docker metadata for production
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: |
-            ${{ env.REGISTRY }}/${{ github.repository }}
+            ${{ env.REGISTRY }}/${{ secrets.DOCKERHUB_USERNAME }}/quotebox
           tags: |
             type=sha,format=short
             type=raw,value=latest
