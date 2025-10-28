@@ -184,6 +184,13 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Validate Docker Hub secrets
+        run: |
+          if [ -z "${{ secrets.DOCKERHUB_USERNAME }}" ] || [ -z "${{ secrets.DOCKERHUB_TOKEN }}" ]; then
+            echo "ERROR: DOCKERHUB_USERNAME and DOCKERHUB_TOKEN must be set as repository secrets (Settings → Secrets & variables → Actions).";
+            exit 1;
+          fi
+
       - name: Generate Docker metadata
         id: meta
         uses: docker/metadata-action@v5
